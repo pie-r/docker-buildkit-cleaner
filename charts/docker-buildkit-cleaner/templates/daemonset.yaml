@@ -1,0 +1,47 @@
+{{ if .Values.enableCleanup }}
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: docker-buildkit-cleaner
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "docker-buildkit-cleaner.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "docker-buildkit-cleaner.selectorLabels" . | nindent 8 }}
+  template:
+    metadata:
+      labels:
+        {{- include "docker-buildkit-cleaner.selectorLabels" . | nindent 8 }}
+    spec:
+      tolerations:
+      - operator: Exists
+      containers:
+      - image: docker:20.10.21-alpine3.16
+        name: docker-buildkit-cleaner
+        # ArgoCD will remove the deamonset after XX minutes
+        command: ["sh","-c","docker buildx prune --filter until=168h --verbose --force && echo 'buildkit cleanup done - wait to die' && sleep inf"]
+        resources:
+          limits:
+            cpu: 500m
+            memory: 100M
+          requests:
+            cpu: 10m
+            memory: 20M
+        volumeMounts:
+        - mountPath: /host
+          name: host-root
+        - mountPath: /var/run 
+          name: docker-sock 
+      terminationGracePeriodSeconds: 5
+      volumes:
+      - hostPath:
+          path: /
+          type: ""
+        name: host-root
+      - name: docker-sock 
+        hostPath: 
+          path: /var/run
+      priorityClassName: "<configure>" # define available priorityclass e.g. system-cluster-critica
+{{- end }}

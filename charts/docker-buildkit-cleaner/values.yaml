@@ -1,0 +1,6 @@
+namespace: docker-buildkit-cleaner
+
+commonLabels:
+  team: team-name
+
+enableCleanup: false
